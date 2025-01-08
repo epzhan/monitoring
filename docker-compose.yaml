@@ -1,0 +1,49 @@
+networks:
+  k6-network:
+    name: k6-network
+    driver: bridge
+  grafana-network:
+    name: grafana-network
+    driver: bridge
+
+services:
+  influxdb-service:
+    container_name: influxdb-service
+    image: influxdb:1.8.10 # Version 2.x introduces some breaking compatibility changes. K6 support for it comes via an extension
+    #image: influxdb:2.7.11
+    networks:
+      - k6-network
+      - grafana-network
+    ports:
+      - 8086:8086
+    environment:
+      - INFLUXDB_DB=k6
+
+  grafana-service:
+    container_name: grafana-service
+    image: grafana/grafana:latest
+    networks:
+      - grafana-network
+    ports:
+      - 3000:3000
+    environment:
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_BASIC_ENABLED=false
+    volumes:
+      - ./grafana.ini:/etc/grafana/grafana.ini
+      - ./dashboards:/var/lib/grafana/dashboards
+      - ./grafana-dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+    
+  k6-service:
+    container_name: k6-service
+    image: grafana/k6:latest
+    networks:
+      - k6-network
+    ports:
+      - 6565:6565
+    environment:
+      - K6_OUT=influxdb=http://influxdb-service:8086/k6
+    volumes:
+      - ./src:/src

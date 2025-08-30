@@ -8,6 +8,8 @@ networks:
 volumes:
   prometheus-data:
   loki-data:
+  tempo-data:                          # <--- Declare the volume
+    driver: local
     
 services:
 
@@ -76,26 +78,37 @@ services:
 
   ## Traces ##
 
-  zipkin:
-    container_name: zipkin
-    image: openzipkin/zipkin:latest
-    networks:
-      - monitor-network
-    ports:
-      - "9411:9411"
+  # zipkin:
+  #   container_name: zipkin
+  #   image: openzipkin/zipkin:latest
+  #   networks:
+  #     - monitor-network
+  #   ports:
+  #     - "9411:9411"
     
-  jaeger:
-    container_name: jaeger-service
-    image: jaegertracing/all-in-one:1.67.0
-    networks:
-      - monitor-network
-    ports:
-      - "16686:16686" # web UI
-      - "4317" # OTLP receiver for traces
-      - "4318" # OTLP HTTP default port (protobuf)
-    environment:
-      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
-      - COLLECTOR_OTLP_ENABLED=true
+  # jaeger:
+  #   container_name: jaeger-service
+  #   image: jaegertracing/all-in-one:1.67.0
+  #   networks:
+  #     - monitor-network
+  #   ports:
+  #     - "16686:16686" # web UI
+  #     - "4317" # OTLP receiver for traces
+  #     - "4318" # OTLP HTTP default port (protobuf)
+  #   environment:
+  #     - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+  #     - COLLECTOR_OTLP_ENABLED=true
+  #     - SPAN_STORAGE_TYPE=elasticsearch
+  #     - ES_SERVER_URLS=http://elasticsearch:9200
+  #   depends_on:
+  #     - elasticsearch
+  
+  # elasticsearch:
+  #   image: elasticsearch:7.17.10
+  #   ports:
+  #     - "9200:9200"
+  #   environment:
+  #     - discovery.type=single-node
   
   influxdb-service:
     container_name: influxdb-service
@@ -107,6 +120,24 @@ services:
       - "8086:8086"
     environment:
       - INFLUXDB_DB=k6
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+      - ./monitoring/tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200" # Tempo HTTP port
+      - "14317:4317" # OTLP gRPC receiver
+      - "14318:4318" # OTLP HTTP receiver
+    networks:
+      - monitor-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3200/ready"]
+      interval: 5s
+      timeout: 1s
+      retries: 5
 
   ## Analytics and Visualization ##
 

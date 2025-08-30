@@ -19,3 +19,18 @@ datasources:
     database: k6
     url: http://influxdb-service:8086
     isDefault: false
+  
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    url: http://tempo:3200
+    access: proxy
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      httpMethod: POST
+      traces:
+        nodeGraph:
+          enabled: true
+        # For trace-to-logs or trace-to-metrics, you'd add configurations here

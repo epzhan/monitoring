@@ -57,6 +57,11 @@ exporters:
     default_labels_enabled:
       exporter: false
       job: true
+   
+  otlp/tempo:
+    endpoint: "tempo:4317"
+    tls:
+      insecure: true
 
 extensions:
   health_check:
@@ -68,14 +73,11 @@ extensions:
 
 service:
   extensions: [health_check]
-  # telemetry:
-  #   logs:
-  #     level: "debug"
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch, memory_limiter]
-      exporters: [otlp/jaeger, zipkin] 
+      exporters: [otlp/tempo] #otlp/jaeger, zipkin,
 
     metrics:
       receivers: [otlp]
